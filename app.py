@@ -12,7 +12,7 @@ st.title("🤖 AI do Linkowania Wewnętrznego")
 st.info(
     "**Etapy procesu:**\n"
     "1. **Wyszukiwanie -** model embeddingowy znajduje 10 potencjalnych kandydatów.\n"
-    "2. **Reranking -** model rerankingowy precyzyjnie ocenia tych 10 kandydatów, aby wybrać 5 najlepszych.\"
+    "2. **Reranking -** model rerankingowy precyzyjnie ocenia tych 10 kandydatów, aby wybrać 5 najlepszych.\n"
  "**Wymagania:**\n"
      "1. **Plik CSV -** musi zawierać kolumny: url, h1, title\n"
      "2. **Wybór pomiędzy h1 i title -** wskaż na której kolumnie ma bazować model.\"
@@ -135,4 +135,5 @@ if st.button("🚀 Uruchom zaawansowaną analizę", disabled=(uploaded_file is N
     except Exception as e:
         st.error(f"Wystąpił nieoczekiwany błąd podczas przetwarzania: {e}")
         st.warning("Sprawdź swój klucz API w ustawieniach, limity konta oraz połączenie z internetem.")
+
 
