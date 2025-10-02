@@ -244,6 +244,4 @@ else:
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
         except Exception as e:
-            st.error(f"Wystąpił nieoczekiwany błąd: {e}")```
-
-Teraz Twoja aplikacja powinna działać poprawnie, oferując dwa oddzielne tryby analizy.
+            st.error(f"Wystąpił nieoczekiwany błąd: {e}")
