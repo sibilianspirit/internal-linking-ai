@@ -5,19 +5,57 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import CrossEncoder
 import time
+import re
 from io import BytesIO
 
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
 st.title("🤖 AI do Linkowania Wewnętrznego")
 
-# --- Stałe konfiguracyjne (wspólne dla obu trybów) ---
+# --- Stałe konfiguracyjne ---
 EMBEDDING_MODEL = 'text-embedding-3-large'
 RERANKER_MODEL = 'jinaai/jina-reranker-v2-base-multilingual' 
 NUM_CANDIDATES = 10
 NUM_FINAL_RESULTS = 5
 
-# --- Funkcje pomocnicze (wspólne dla obu trybów) ---
+# Definicje aliasów dla kolumn
+COLUMN_ALIASES = {
+    'url': ['url', 'address'],
+    'h1': ['h1'],
+    'title': ['title']
+}
+
+# --- Funkcje pomocnicze ---
+
+def find_column_map(df: pd.DataFrame) -> dict:
+    """
+    Znajduje rzeczywiste nazwy kolumn w DataFrame na podstawie zdefiniowanych aliasów.
+    Ignoruje wielkość liter i popularne sufiksy numeryczne.
+    """
+    df_columns_lower = {col.lower(): col for col in df.columns}
+    column_map = {}
+    
+    for internal_name, aliases in COLUMN_ALIASES.items():
+        found = False
+        for alias in aliases:
+            if alias in df_columns_lower:
+                column_map[internal_name] = df_columns_lower[alias]
+                found = True
+                break
+            for col_lower, original_col_name in df_columns_lower.items():
+                if re.match(f"^{alias}[-_]?\d*$", col_lower):
+                    column_map[internal_name] = original_col_name
+                    found = True
+                    break
+            if found:
+                break
+    
+    missing = [name for name in COLUMN_ALIASES if name not in column_map]
+    if missing:
+        raise ValueError(f"Nie znaleziono wymaganych kolumn w pliku CSV: {', '.join(missing)}. "
+                         f"Upewnij się, że plik zawiera kolumny o nazwach podobnych do 'url'/'address', 'h1', 'title'.")
+                         
+    return column_map
 
 @st.cache_data
 def get_embeddings(texts: list[str], model: str, api_key: str, progress_text_prefix: str) -> list[list[float]]:
@@ -39,7 +77,6 @@ def get_embeddings(texts: list[str], model: str, api_key: str, progress_text_pre
 
 @st.cache_resource
 def load_reranker_model(model_name: str):
-    """Ładuje model CrossEncoder z pamięci podręcznej."""
     return CrossEncoder(model_name, max_length=1024, trust_remote_code=True)
 
 # --- Wybór trybu analizy ---
@@ -54,15 +91,11 @@ analysis_mode = st.radio(
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
 if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
+    # (ta sekcja pozostaje bez zmian)
     st.info(
         """
-        **Etapy procesu:**
-        1. **Wyszukiwanie -** model embeddingowy znajduje 10 potencjalnych kandydatów.
-        2. **Reranking -** model rerankingowy precyzyjnie ocenia tych 10 kandydatów, aby wybrać 5 najlepszych.
-
-        **Wymagania:**
-        1. **Plik CSV -** musi zawierać kolumny: `url`, `h1`, `title`.
-        2. **Wybór pomiędzy h1 i title -** wskaż, na której kolumnie ma bazować model.
+        **Proces:** Analiza powiązań semantycznych w ramach jednego pliku.
+        **Wymagania:** Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
         """
     )
 
@@ -73,16 +106,19 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
         st.info("Przejdź do ustawień aplikacji w Streamlit Community Cloud i dodaj swój klucz.")
         st.stop()
 
-    uploaded_file = st.file_uploader("1. Wgraj plik CSV", type=["csv"], help="Upewnij się, że plik zawiera kolumny: 'url', 'title' oraz 'h1'.")
-    column_to_embed = st.selectbox("2. Wybierz kolumnę do analizy", ("h1", "title"), disabled=uploaded_file is None)
+    uploaded_file = st.file_uploader("1. Wgraj plik CSV", type=["csv"])
+    
+    column_options = st.empty()
 
-    if st.button("🚀 Uruchom analizę wewnętrzną", disabled=(uploaded_file is None)):
+    if uploaded_file:
         try:
             df = pd.read_csv(uploaded_file)
-            required_columns = ['url', 'title', 'h1']
-            if not all(col in df.columns for col in required_columns):
-                st.error(f"Błąd: Plik CSV musi zawierać kolumny: {', '.join(required_columns)}")
-            else:
+            column_map = find_column_map(df)
+            
+            options_for_select = [column_map['h1'], column_map['title']]
+            column_to_embed = column_options.selectbox("2. Wybierz kolumnę do analizy", options_for_select)
+
+            if st.button("🚀 Uruchom analizę wewnętrzną"):
                 st.write("✅ **Etap 1/4:** Generowanie embeddingów...")
                 texts_to_embed = df[column_to_embed].fillna(" ").tolist()
                 df['embedding'] = get_embeddings(texts_to_embed, EMBEDDING_MODEL, api_key, "Etap 1")
@@ -92,10 +128,9 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
                 similarity_matrix = cosine_similarity(embeddings_matrix)
                 
                 st.write(f"✅ **Etap 3/4:** Ładowanie modelu Jina Reranker...")
-                with st.spinner("Model Jina Reranker ładuje się tylko za pierwszym razem, proszę czekać..."):
-                    reranker = load_reranker_model(RERANKER_MODEL)
+                reranker = load_reranker_model(RERANKER_MODEL)
 
-                st.write(f"✅ **Etap 4/4:** Precyzyjny Reranking z Jina...")
+                st.write(f"✅ **Etap 4/4:** Precyzyjny Reranking...")
                 progress_bar_rerank = st.progress(0, text="Reranking...")
                 
                 all_results = []
@@ -104,21 +139,15 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
                     candidate_indices = similarity_matrix[idx].argsort()[-(NUM_CANDIDATES + 1):-1][::-1]
                     candidate_texts = df[column_to_embed].iloc[candidate_indices].tolist()
                     
-                    reranked_results = reranker.rank(
-                        source_text,
-                        candidate_texts,
-                        return_documents=False,
-                        top_k=NUM_FINAL_RESULTS
-                    )
+                    reranked_results = reranker.rank(source_text, candidate_texts, return_documents=False, top_k=NUM_FINAL_RESULTS)
                     
-                    original_urls = df['url'].iloc[candidate_indices].tolist()
+                    original_urls = df[column_map['url']].iloc[candidate_indices].tolist()
                     top_urls = [original_urls[res['corpus_id']] for res in reranked_results]
 
-                    result_row = {'original_url': df['url'].iloc[idx]}
+                    result_row = {'original_url': df[column_map['url']].iloc[idx]}
                     for i, url in enumerate(top_urls):
                         result_row[f'rekomendowany_link_{i+1}'] = url
                     all_results.append(result_row)
-
                     progress_bar_rerank.progress((idx + 1) / len(df), text=f"Reranking... {idx + 1}/{len(df)}")
 
                 progress_bar_rerank.empty()
@@ -126,16 +155,10 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
                 st.success("🎉 Analiza zakończona pomyślnie!")
                 st.dataframe(output_df.head())
                 csv_output = output_df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Pobierz wyniki (output_jina_reranked.csv)",
-                    data=csv_output,
-                    file_name='output_jina_reranked.csv',
-                    mime='text/csv',
-                )
-        except Exception as e:
-            st.error(f"Wystąpił nieoczekiwany błąd podczas przetwarzania: {e}")
-            st.warning("Sprawdź swój klucz API, limity konta oraz połączenie z internetem.")
+                st.download_button("📥 Pobierz wyniki (CSV)", csv_output, 'output_internal_links.csv', 'text/csv')
 
+        except Exception as e:
+            st.error(f"Wystąpił błąd: {e}")
 
 # ==============================================================================
 # TRYB 2: LINKOWANIE KRZYŻOWE (DWA PLIKI)
@@ -143,8 +166,8 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
 else:
     st.info(
         """
-        **Proces:** Model znajduje powiązania semantyczne między dwoma różnymi listami URL-i (np. kategorie i blog).
-        **Wynik:** Dwa arkusze - jeden z rekomendacjami z Pliku 2 dla Pliku 1, a drugi odwrotnie.
+        **Proces:** Analiza powiązań między dwoma plikami (np. kategorie vs blog).
+        **Wymagania:** Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
         """
     )
     
@@ -152,96 +175,125 @@ else:
         api_key = st.secrets["OPENAI_API_KEY"]
     except KeyError:
         st.error("Błąd: Klucz OPENAI_API_KEY nie został ustawiony w sekretach aplikacji!")
-        st.info("Przejdź do ustawień aplikacji w Streamlit Community Cloud i dodaj swój klucz.")
         st.stop()
 
     col1, col2 = st.columns(2)
+    
+    column_options_1 = col1.empty()
+    column_options_2 = col2.empty()
+    
+    df1, df2 = None, None
+    column_map1, column_map2 = None, None
+
     with col1:
         uploaded_file_1 = st.file_uploader("1. Wgraj Plik 1 (np. Kategorie)", type=["csv"])
-        column_to_embed_1 = st.selectbox("Wybierz kolumnę dla Pliku 1", ("h1", "title"), key="col1_select")
+        if uploaded_file_1:
+            try:
+                df1 = pd.read_csv(uploaded_file_1)
+                column_map1 = find_column_map(df1)
+                options1 = [column_map1['h1'], column_map1['title']]
+                column_to_embed_1 = column_options_1.selectbox("Wybierz kolumnę dla Pliku 1", options1, key="col1_select")
+            except Exception as e:
+                st.error(f"Błąd w Pliku 1: {e}")
+                df1 = None
 
     with col2:
         uploaded_file_2 = st.file_uploader("2. Wgraj Plik 2 (np. Blog)", type=["csv"])
-        column_to_embed_2 = st.selectbox("Wybierz kolumnę dla Pliku 2", ("h1", "title"), key="col2_select")
+        if uploaded_file_2:
+            try:
+                df2 = pd.read_csv(uploaded_file_2)
+                column_map2 = find_column_map(df2)
+                options2 = [column_map2['h1'], column_map2['title']]
+                column_to_embed_2 = column_options_2.selectbox("Wybierz kolumnę dla Pliku 2", options2, key="col2_select")
+            except Exception as e:
+                st.error(f"Błąd w Pliku 2: {e}")
+                df2 = None
 
-    if st.button("🚀 Uruchom analizę krzyżową", disabled=(uploaded_file_1 is None or uploaded_file_2 is None)):
+    if st.button("🚀 Uruchom analizę krzyżową", disabled=(df1 is None or df2 is None)):
         try:
-            df1 = pd.read_csv(uploaded_file_1)
-            df2 = pd.read_csv(uploaded_file_2)
+            texts1 = df1[column_to_embed_1].fillna(" ").tolist()
+            embeddings1 = get_embeddings(texts1, EMBEDDING_MODEL, api_key, "Plik 1")
 
-            if 'url' not in df1.columns or 'url' not in df2.columns:
-                st.error("Oba pliki muszą zawierać kolumnę 'url'.")
-            else:
-                texts1 = df1[column_to_embed_1].fillna(" ").tolist()
-                embeddings1 = get_embeddings(texts1, EMBEDDING_MODEL, api_key, "Plik 1")
+            texts2 = df2[column_to_embed_2].fillna(" ").tolist()
+            embeddings2 = get_embeddings(texts2, EMBEDDING_MODEL, api_key, "Plik 2")
 
-                texts2 = df2[column_to_embed_2].fillna(" ").tolist()
-                embeddings2 = get_embeddings(texts2, EMBEDDING_MODEL, api_key, "Plik 2")
+            matrix1 = np.vstack(embeddings1)
+            matrix2 = np.vstack(embeddings2)
 
-                matrix1 = np.vstack(embeddings1)
-                matrix2 = np.vstack(embeddings2)
+            st.write("✅ Obliczanie podobieństwa i reranking...")
+            similarity_matrix_1_vs_2 = cosine_similarity(matrix1, matrix2)
+            
+            reranker = load_reranker_model(RERANKER_MODEL)
+            
+            ### POPRAWKA: Dodanie paska postępu ###
+            progress_bar_rerank = st.progress(0, text="Reranking: Plik 1 -> Plik 2...")
 
-                st.write("✅ **Obliczanie podobieństwa i reranking...**")
-                similarity_matrix_1_vs_2 = cosine_similarity(matrix1, matrix2)
+            # --- Przetwarzanie 1 -> 2 ---
+            results_1_to_2 = []
+            for idx in range(len(df1)):
+                source_text = texts1[idx]
+                candidate_indices = similarity_matrix_1_vs_2[idx].argsort()[-NUM_CANDIDATES:][::-1]
+                candidate_texts = [texts2[i] for i in candidate_indices]
                 
-                with st.spinner("Model Jina Reranker ładuje się tylko za pierwszym razem, proszę czekać..."):
-                    reranker = load_reranker_model(RERANKER_MODEL)
+                reranked_results = reranker.rank(source_text, candidate_texts, top_k=NUM_FINAL_RESULTS, return_documents=False)
                 
-                # --- Przetwarzanie 1 -> 2 ---
-                results_1_to_2 = []
-                for idx in range(len(df1)):
-                    source_text = texts1[idx]
-                    candidate_indices = similarity_matrix_1_vs_2[idx].argsort()[-NUM_CANDIDATES:][::-1]
-                    candidate_texts = [texts2[i] for i in candidate_indices]
-                    
-                    reranked_results = reranker.rank(source_text, candidate_texts, top_k=NUM_FINAL_RESULTS, return_documents=False)
-                    
-                    original_urls_candidates = df2['url'].iloc[candidate_indices].tolist()
-                    top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
-                    
-                    result_row = {'original_url_plik_1': df1['url'].iloc[idx]}
-                    for i, url in enumerate(top_urls):
-                        result_row[f'rekomendowany_link_z_pliku_2_{i+1}'] = url
-                    results_1_to_2.append(result_row)
-                output_df_1_to_2 = pd.DataFrame(results_1_to_2)
+                original_urls_candidates = df2[column_map2['url']].iloc[candidate_indices].tolist()
+                top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                # --- Przetwarzanie 2 -> 1 ---
-                similarity_matrix_2_vs_1 = similarity_matrix_1_vs_2.T
-                results_2_to_1 = []
-                for idx in range(len(df2)):
-                    source_text = texts2[idx]
-                    candidate_indices = similarity_matrix_2_vs_1[idx].argsort()[-NUM_CANDIDATES:][::-1]
-                    candidate_texts = [texts1[i] for i in candidate_indices]
+                result_row = {'original_url_plik_1': df1[column_map1['url']].iloc[idx]}
+                for i, url in enumerate(top_urls):
+                    result_row[f'rekomendowany_link_z_pliku_2_{i+1}'] = url
+                results_1_to_2.append(result_row)
+                ### POPRAWKA: Aktualizacja paska postępu ###
+                progress_bar_rerank.progress((idx + 1) / len(df1), text=f"Reranking: Plik 1 -> Plik 2... ({idx + 1}/{len(df1)})")
 
-                    reranked_results = reranker.rank(source_text, candidate_texts, top_k=NUM_FINAL_RESULTS, return_documents=False)
-                    
-                    original_urls_candidates = df1['url'].iloc[candidate_indices].tolist()
-                    top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
-                    
-                    result_row = {'original_url_plik_2': df2['url'].iloc[idx]}
-                    for i, url in enumerate(top_urls):
-                        result_row[f'rekomendowany_link_z_pliku_1_{i+1}'] = url
-                    results_2_to_1.append(result_row)
-                output_df_2_to_1 = pd.DataFrame(results_2_to_1)
+            output_df_1_to_2 = pd.DataFrame(results_1_to_2)
+            
+            ### POPRAWKA: Zmiana tekstu i reset paska postępu dla drugiego etapu ###
+            progress_bar_rerank.progress(0, text="Reranking: Plik 2 -> Plik 1...")
 
-                st.success("🎉 Analiza krzyżowa zakończona pomyślnie!")
+            # --- Przetwarzanie 2 -> 1 ---
+            similarity_matrix_2_vs_1 = similarity_matrix_1_vs_2.T
+            results_2_to_1 = []
+            for idx in range(len(df2)):
+                source_text = texts2[idx]
+                candidate_indices = similarity_matrix_2_vs_1[idx].argsort()[-NUM_CANDIDATES:][::-1]
+                candidate_texts = [texts1[i] for i in candidate_indices]
+
+                reranked_results = reranker.rank(source_text, candidate_texts, top_k=NUM_FINAL_RESULTS, return_documents=False)
                 
-                st.subheader("Wyniki: Rekomendacje z Pliku 2 dla Pliku 1")
-                st.dataframe(output_df_1_to_2.head())
+                original_urls_candidates = df1[column_map1['url']].iloc[candidate_indices].tolist()
+                top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                st.subheader("Wyniki: Rekomendacje z Pliku 1 dla Pliku 2")
-                st.dataframe(output_df_2_to_1.head())
-                
-                output_excel = BytesIO()
-                with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
-                    output_df_1_to_2.to_excel(writer, sheet_name='Rekomendacje_dla_Pliku_1', index=False)
-                    output_df_2_to_1.to_excel(writer, sheet_name='Rekomendacje_dla_Pliku_2', index=False)
-                
-                st.download_button(
-                    label="📥 Pobierz wyniki (plik Excel)",
-                    data=output_excel.getvalue(),
-                    file_name='cross_linking_results.xlsx',
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                )
+                result_row = {'original_url_plik_2': df2[column_map2['url']].iloc[idx]}
+                for i, url in enumerate(top_urls):
+                    result_row[f'rekomendowany_link_z_pliku_1_{i+1}'] = url
+                results_2_to_1.append(result_row)
+                ### POPRAWKA: Aktualizacja paska postępu ###
+                progress_bar_rerank.progress((idx + 1) / len(df2), text=f"Reranking: Plik 2 -> Plik 1... ({idx + 1}/{len(df2)})")
+            
+            ### POPRAWKA: Usunięcie paska postępu po zakończeniu pracy ###
+            progress_bar_rerank.empty()
+            output_df_2_to_1 = pd.DataFrame(results_2_to_1)
+
+            st.success("🎉 Analiza krzyżowa zakończona pomyślnie!")
+            
+            st.subheader("Wyniki: Rekomendacje z Pliku 2 dla Pliku 1")
+            st.dataframe(output_df_1_to_2.head())
+            
+            st.subheader("Wyniki: Rekomendacje z Pliku 1 dla Pliku 2")
+            st.dataframe(output_df_2_to_1.head())
+            
+            output_excel = BytesIO()
+            with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
+                output_df_1_to_2.to_excel(writer, sheet_name='Rekomendacje_dla_Pliku_1', index=False)
+                output_df_2_to_1.to_excel(writer, sheet_name='Rekomendacje_dla_Pliku_2', index=False)
+            
+            st.download_button(
+                "📥 Pobierz wyniki (Excel)",
+                output_excel.getvalue(),
+                'cross_linking_results.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
         except Exception as e:
-            st.error(f"Wystąpił nieoczekiwany błąd: {e}")
+            st.error(f"Wystąpił błąd podczas analizy: {e}")
