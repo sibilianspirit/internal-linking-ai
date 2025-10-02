@@ -3,7 +3,8 @@ import pandas as pd
 from openai import OpenAI
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from jina_reranker.api import JinaReranker
+# ZMIANA 1: Poprawny import z biblioteki sentence-transformers
+from sentence_transformers import CrossEncoder
 import time
 
 # --- Konfiguracja strony Streamlit ---
@@ -23,7 +24,6 @@ st.info(
 
 # --- Stałe konfiguracyjne ---
 EMBEDDING_MODEL = 'text-embedding-3-large'
-# ZMIANA: Nowy, lepszy model rerankujący
 RERANKER_MODEL = 'jinaai/jina-reranker-v2-base-multilingual' 
 NUM_CANDIDATES = 10
 NUM_FINAL_RESULTS = 5
@@ -32,7 +32,6 @@ NUM_FINAL_RESULTS = 5
 
 @st.cache_data
 def get_embeddings(texts: list[str], model: str, api_key: str) -> list[list[float]]:
-    # ... (ta funkcja pozostaje bez zmian)
     client = OpenAI(api_key=api_key)
     embeddings = []
     batch_size = 100
@@ -51,9 +50,10 @@ def get_embeddings(texts: list[str], model: str, api_key: str) -> list[list[floa
 
 @st.cache_resource
 def load_reranker_model(model_name: str):
-    """Ładuje model Jina Reranker z pamięci podręcznej."""
-    # ZMIANA: Inicjalizujemy nową klasę modelu
-    return JinaReranker(model_name)
+    """Ładuje model CrossEncoder z pamięci podręcznej."""
+    # ZMIANA 2: Używamy klasy CrossEncoder do załadowania modelu
+    # max_length jest ważne dla dłuższych tekstów, zgodnie z dokumentacją modelu
+    return CrossEncoder(model_name, max_length=1024, trust_remote_code=True)
 
 # --- Główna logika aplikacji ---
 try:
@@ -63,19 +63,16 @@ except KeyError:
     st.info("Przejdź do ustawień aplikacji w Streamlit Community Cloud i dodaj swój klucz.")
     st.stop()
 
-# Interfejs użytkownika
 uploaded_file = st.file_uploader("1. Wgraj plik CSV", type=["csv"], help="Upewnij się, że plik zawiera kolumny: 'url', 'title' oraz 'h1'.")
 column_to_embed = st.selectbox("2. Wybierz kolumnę do analizy", ("h1", "title"), disabled=uploaded_file is None)
 
 if st.button("🚀 Uruchom analizę z Jina Reranker", disabled=(uploaded_file is None)):
     try:
         df = pd.read_csv(uploaded_file)
-        # ... (walidacja pliku bez zmian)
         required_columns = ['url', 'title', 'h1']
         if not all(col in df.columns for col in required_columns):
             st.error(f"Błąd: Plik CSV musi zawierać kolumny: {', '.join(required_columns)}")
         else:
-            # ... (Kroki 1, 2, 3 - generowanie embeddingów, retrieval, ładowanie modelu - pozostają koncepcyjnie takie same)
             st.write("✅ **Etap 1/4:** Generowanie embeddingów...")
             texts_to_embed = df[column_to_embed].fillna(" ").tolist()
             df['embedding'] = get_embeddings(texts_to_embed, EMBEDDING_MODEL, api_key)
@@ -97,18 +94,18 @@ if st.button("🚀 Uruchom analizę z Jina Reranker", disabled=(uploaded_file is
                 candidate_indices = similarity_matrix[idx].argsort()[-(NUM_CANDIDATES + 1):-1][::-1]
                 candidate_texts = df[column_to_embed].iloc[candidate_indices].tolist()
                 
-                # ZMIANA: Nowy, prostszy sposób na reranking
-                reranked_results = reranker.rerank(
-                    query=source_text,
-                    documents=candidate_texts,
-                    top_n=NUM_FINAL_RESULTS # Od razu prosimy o 5 najlepszych wyników
+                # ZMIANA 3: Używamy metody .rank() z odpowiednimi parametrami
+                reranked_results = reranker.rank(
+                    source_text,
+                    candidate_texts,
+                    return_documents=False, # Nie potrzebujemy tekstu, tylko indeksy
+                    top_k=NUM_FINAL_RESULTS
                 )
                 
-                # ZMIANA: Przetwarzanie nowego formatu wyników
-                # Wynik to lista słowników, np. [{'index': 2, 'relevance_score': 0.9, 'document': 'text...'}, ...]
-                # Potrzebujemy oryginalnych URLi, więc musimy dopasować indeksy
+                # ZMIANA 4: Wynik to lista słowników, np. [{'corpus_id': 2, 'score': 0.9}, ...]
+                # Dostosowujemy klucz z 'index' na 'corpus_id'
                 original_urls = df['url'].iloc[candidate_indices].tolist()
-                top_urls = [original_urls[res['index']] for res in reranked_results]
+                top_urls = [original_urls[res['corpus_id']] for res in reranked_results]
 
                 result_row = {'original_url': df['url'].iloc[idx]}
                 for i, url in enumerate(top_urls):
@@ -117,7 +114,6 @@ if st.button("🚀 Uruchom analizę z Jina Reranker", disabled=(uploaded_file is
 
                 progress_bar_rerank.progress((idx + 1) / len(df), text=f"Reranking... {idx + 1}/{len(df)}")
 
-            # ... (reszta kodu bez zmian)
             progress_bar_rerank.empty()
             output_df = pd.DataFrame(all_results)
             st.success("🎉 Analiza zakończona pomyślnie!")
