@@ -1,7 +1,0 @@
-streamlit
-pandas
-openai
-scikit-learn
-jina-reranker
-torch
-numpy
