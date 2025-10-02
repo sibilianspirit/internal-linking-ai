@@ -28,10 +28,6 @@ COLUMN_ALIASES = {
 # --- Funkcje pomocnicze ---
 
 def find_column_map(df: pd.DataFrame) -> dict:
-    """
-    Znajduje rzeczywiste nazwy kolumn w DataFrame na podstawie zdefiniowanych aliasów.
-    Ignoruje wielkość liter i popularne sufiksy numeryczne.
-    """
     df_columns_lower = {col.lower(): col for col in df.columns}
     column_map = {}
     
@@ -91,7 +87,6 @@ analysis_mode = st.radio(
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
 if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
-    # (ta sekcja pozostaje bez zmian)
     st.info(
         """
         **Proces:** Analiza powiązań semantycznych w ramach jednego pliku.
@@ -103,7 +98,6 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
         api_key = st.secrets["OPENAI_API_KEY"]
     except KeyError:
         st.error("Błąd: Klucz OPENAI_API_KEY nie został ustawiony w sekretach aplikacji!")
-        st.info("Przejdź do ustawień aplikacji w Streamlit Community Cloud i dodaj swój klucz.")
         st.stop()
 
     uploaded_file = st.file_uploader("1. Wgraj plik CSV", type=["csv"])
@@ -115,12 +109,16 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
             df = pd.read_csv(uploaded_file)
             column_map = find_column_map(df)
             
+            ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
+            df[column_map['h1']] = df[column_map['h1']].fillna(" ")
+            df[column_map['title']] = df[column_map['title']].fillna(" ")
+
             options_for_select = [column_map['h1'], column_map['title']]
             column_to_embed = column_options.selectbox("2. Wybierz kolumnę do analizy", options_for_select)
 
             if st.button("🚀 Uruchom analizę wewnętrzną"):
                 st.write("✅ **Etap 1/4:** Generowanie embeddingów...")
-                texts_to_embed = df[column_to_embed].fillna(" ").tolist()
+                texts_to_embed = df[column_to_embed].tolist() # Już nie potrzeba .fillna() tutaj
                 df['embedding'] = get_embeddings(texts_to_embed, EMBEDDING_MODEL, api_key, "Etap 1")
                 
                 st.write("✅ **Etap 2/4:** Wstępne wyszukiwanie kandydatów...")
@@ -191,6 +189,11 @@ else:
             try:
                 df1 = pd.read_csv(uploaded_file_1)
                 column_map1 = find_column_map(df1)
+                
+                ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
+                df1[column_map1['h1']] = df1[column_map1['h1']].fillna(" ")
+                df1[column_map1['title']] = df1[column_map1['title']].fillna(" ")
+
                 options1 = [column_map1['h1'], column_map1['title']]
                 column_to_embed_1 = column_options_1.selectbox("Wybierz kolumnę dla Pliku 1", options1, key="col1_select")
             except Exception as e:
@@ -203,6 +206,11 @@ else:
             try:
                 df2 = pd.read_csv(uploaded_file_2)
                 column_map2 = find_column_map(df2)
+                
+                ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
+                df2[column_map2['h1']] = df2[column_map2['h1']].fillna(" ")
+                df2[column_map2['title']] = df2[column_map2['title']].fillna(" ")
+
                 options2 = [column_map2['h1'], column_map2['title']]
                 column_to_embed_2 = column_options_2.selectbox("Wybierz kolumnę dla Pliku 2", options2, key="col2_select")
             except Exception as e:
@@ -211,10 +219,10 @@ else:
 
     if st.button("🚀 Uruchom analizę krzyżową", disabled=(df1 is None or df2 is None)):
         try:
-            texts1 = df1[column_to_embed_1].fillna(" ").tolist()
+            texts1 = df1[column_to_embed_1].tolist()
             embeddings1 = get_embeddings(texts1, EMBEDDING_MODEL, api_key, "Plik 1")
 
-            texts2 = df2[column_to_embed_2].fillna(" ").tolist()
+            texts2 = df2[column_to_embed_2].tolist()
             embeddings2 = get_embeddings(texts2, EMBEDDING_MODEL, api_key, "Plik 2")
 
             matrix1 = np.vstack(embeddings1)
@@ -225,10 +233,8 @@ else:
             
             reranker = load_reranker_model(RERANKER_MODEL)
             
-            ### POPRAWKA: Dodanie paska postępu ###
             progress_bar_rerank = st.progress(0, text="Reranking: Plik 1 -> Plik 2...")
 
-            # --- Przetwarzanie 1 -> 2 ---
             results_1_to_2 = []
             for idx in range(len(df1)):
                 source_text = texts1[idx]
@@ -244,15 +250,12 @@ else:
                 for i, url in enumerate(top_urls):
                     result_row[f'rekomendowany_link_z_pliku_2_{i+1}'] = url
                 results_1_to_2.append(result_row)
-                ### POPRAWKA: Aktualizacja paska postępu ###
                 progress_bar_rerank.progress((idx + 1) / len(df1), text=f"Reranking: Plik 1 -> Plik 2... ({idx + 1}/{len(df1)})")
 
             output_df_1_to_2 = pd.DataFrame(results_1_to_2)
             
-            ### POPRAWKA: Zmiana tekstu i reset paska postępu dla drugiego etapu ###
             progress_bar_rerank.progress(0, text="Reranking: Plik 2 -> Plik 1...")
 
-            # --- Przetwarzanie 2 -> 1 ---
             similarity_matrix_2_vs_1 = similarity_matrix_1_vs_2.T
             results_2_to_1 = []
             for idx in range(len(df2)):
@@ -269,10 +272,8 @@ else:
                 for i, url in enumerate(top_urls):
                     result_row[f'rekomendowany_link_z_pliku_1_{i+1}'] = url
                 results_2_to_1.append(result_row)
-                ### POPRAWKA: Aktualizacja paska postępu ###
                 progress_bar_rerank.progress((idx + 1) / len(df2), text=f"Reranking: Plik 2 -> Plik 1... ({idx + 1}/{len(df2)})")
             
-            ### POPRAWKA: Usunięcie paska postępu po zakończeniu pracy ###
             progress_bar_rerank.empty()
             output_df_2_to_1 = pd.DataFrame(results_2_to_1)
 
