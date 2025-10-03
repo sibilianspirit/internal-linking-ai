@@ -12,13 +12,11 @@ from io import BytesIO
 
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
 st.markdown(
-    "<h2 style='text-align: center; color: #3A75C4;'>🔗 Embedding-Based Linker</h2>",
+    f"<h2 style='text-align: center; color: #5CFF87;'>🔗 Embedding-Based Linker</h2>",
     unsafe_allow_html=True
 )
-
-# 2. Nazwa zespołu: Zmniejszamy, centrujemy i zmieniamy kolor na ciemnoszary.
 st.markdown(
-    "<h4 style='text-align: center; color: #555555;'>☢️ RANKING RENEGADES</h3>",
+    f"<h3 style='text-align: center; color: #FFFFFF;'>☢️ by RANKING RENEGADES</h3>",
     unsafe_allow_html=True
 )
 
@@ -317,6 +315,7 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
 
 
