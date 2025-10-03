@@ -11,6 +11,8 @@ from io import BytesIO
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
 st.title("🤖 AI do Linkowania Wewnętrznego")
+### ZMIANA UX: Dodanie nazwy zespołu ###
+st.header("☢️ RANKING RENEGADES")
 
 # --- Stałe konfiguracyjne ---
 EMBEDDING_MODEL = 'text-embedding-3-large'
@@ -76,9 +78,10 @@ def load_reranker_model(model_name: str):
     return CrossEncoder(model_name, max_length=1024, trust_remote_code=True)
 
 # --- Wybór trybu analizy ---
+### ZMIANA UX: Aktualizacja etykiet ###
 analysis_mode = st.radio(
     "Wybierz tryb analizy:",
-    ("Linkowanie Wewnętrzne (jeden plik)", "Linkowanie Krzyżowe (dwa pliki)"),
+    ("Linkowanie wewnętrzne (jeden plik)", "Linkowanie wewnętrzne (dwa pliki)"),
     horizontal=True
 )
 
@@ -86,11 +89,15 @@ analysis_mode = st.radio(
 # ==============================================================================
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
-if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
+if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
+    ### ZMIANA UX: Poprawa formatowania opisu ###
     st.info(
         """
-        **Proces:** Analiza powiązań semantycznych w ramach jednego pliku.
-        **Wymagania:** Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
+        **Proces:**  
+        Analiza powiązań semantycznych w ramach jednego pliku.
+        
+        **Wymagania:**  
+        Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
         """
     )
 
@@ -109,7 +116,6 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
             df = pd.read_csv(uploaded_file)
             column_map = find_column_map(df)
             
-            ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
             df[column_map['h1']] = df[column_map['h1']].fillna(" ")
             df[column_map['title']] = df[column_map['title']].fillna(" ")
 
@@ -118,7 +124,7 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
 
             if st.button("🚀 Uruchom analizę wewnętrzną"):
                 st.write("✅ **Etap 1/4:** Generowanie embeddingów...")
-                texts_to_embed = df[column_to_embed].tolist() # Już nie potrzeba .fillna() tutaj
+                texts_to_embed = df[column_to_embed].tolist()
                 df['embedding'] = get_embeddings(texts_to_embed, EMBEDDING_MODEL, api_key, "Etap 1")
                 
                 st.write("✅ **Etap 2/4:** Wstępne wyszukiwanie kandydatów...")
@@ -141,10 +147,11 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
                     
                     original_urls = df[column_map['url']].iloc[candidate_indices].tolist()
                     top_urls = [original_urls[res['corpus_id']] for res in reranked_results]
-
-                    result_row = {'original_url': df[column_map['url']].iloc[idx]}
+                    
+                    ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
+                    result_row = {'URL': df[column_map['url']].iloc[idx]}
                     for i, url in enumerate(top_urls):
-                        result_row[f'rekomendowany_link_{i+1}'] = url
+                        result_row[f'LINK {i+1}'] = url
                     all_results.append(result_row)
                     progress_bar_rerank.progress((idx + 1) / len(df), text=f"Reranking... {idx + 1}/{len(df)}")
 
@@ -159,13 +166,17 @@ if analysis_mode == "Linkowanie Wewnętrzne (jeden plik)":
             st.error(f"Wystąpił błąd: {e}")
 
 # ==============================================================================
-# TRYB 2: LINKOWANIE KRZYŻOWE (DWA PLIKI)
+# TRYB 2: LINKOWANIE WEWNĘTRZNE (DWA PLIKI)
 # ==============================================================================
 else:
+    ### ZMIANA UX: Poprawa formatowania opisu ###
     st.info(
         """
-        **Proces:** Analiza powiązań między dwoma plikami (np. kategorie vs blog).
-        **Wymagania:** Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
+        **Proces:**  
+        Analiza powiązań między dwoma plikami (np. kategorie vs blog).
+        
+        **Wymagania:**  
+        Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
         """
     )
     
@@ -190,7 +201,6 @@ else:
                 df1 = pd.read_csv(uploaded_file_1)
                 column_map1 = find_column_map(df1)
                 
-                ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
                 df1[column_map1['h1']] = df1[column_map1['h1']].fillna(" ")
                 df1[column_map1['title']] = df1[column_map1['title']].fillna(" ")
 
@@ -207,7 +217,6 @@ else:
                 df2 = pd.read_csv(uploaded_file_2)
                 column_map2 = find_column_map(df2)
                 
-                ### POPRAWKA: Oczyszczanie danych z NaN zaraz po wczytaniu ###
                 df2[column_map2['h1']] = df2[column_map2['h1']].fillna(" ")
                 df2[column_map2['title']] = df2[column_map2['title']].fillna(" ")
 
@@ -246,9 +255,10 @@ else:
                 original_urls_candidates = df2[column_map2['url']].iloc[candidate_indices].tolist()
                 top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                result_row = {'original_url_plik_1': df1[column_map1['url']].iloc[idx]}
+                ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
+                result_row = {'URL': df1[column_map1['url']].iloc[idx]}
                 for i, url in enumerate(top_urls):
-                    result_row[f'rekomendowany_link_z_pliku_2_{i+1}'] = url
+                    result_row[f'LINK {i+1}'] = url
                 results_1_to_2.append(result_row)
                 progress_bar_rerank.progress((idx + 1) / len(df1), text=f"Reranking: Plik 1 -> Plik 2... ({idx + 1}/{len(df1)})")
 
@@ -268,9 +278,10 @@ else:
                 original_urls_candidates = df1[column_map1['url']].iloc[candidate_indices].tolist()
                 top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                result_row = {'original_url_plik_2': df2[column_map2['url']].iloc[idx]}
+                ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
+                result_row = {'URL': df2[column_map2['url']].iloc[idx]}
                 for i, url in enumerate(top_urls):
-                    result_row[f'rekomendowany_link_z_pliku_1_{i+1}'] = url
+                    result_row[f'LINK {i+1}'] = url
                 results_2_to_1.append(result_row)
                 progress_bar_rerank.progress((idx + 1) / len(df2), text=f"Reranking: Plik 2 -> Plik 1... ({idx + 1}/{len(df2)})")
             
@@ -298,5 +309,3 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
-
-
