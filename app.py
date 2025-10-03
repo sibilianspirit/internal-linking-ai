@@ -21,18 +21,18 @@ st.markdown("""
     
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
-        background-color: #75f86f; /* NOWY KOLOR TŁA */
+        background-color: #75f86f; /* Zielone tło */
+        border: 2px solid #FFFFFF; /* NOWOŚĆ: Biała ramka */
         border-radius: 10px;
-        border-color: white;
         padding: 20px;
-        color: #111111;           /* NOWY KOLOR TEKSTU */
+        color: #111111;           /* POPRAWKA: Ciemny tekst dla czytelności */
         margin-bottom: 20px;
     }
 
     /* Styl dla etykiet w ramce */
     .custom-info-box strong {
-        color: #111111;           /* Kolor dla kontrastu na zielonym tle */
-        font-weight: 700;        /* Pogrubienie dla lepszej czytelności */
+        color: #000000;           /* Czarny dla maksymalnego kontrastu */
+        font-weight: 700;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -46,7 +46,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 st.markdown(
-    "<h3 style='text-align: center; color: #FFFFFF; font-family: \"Readex Pro\", sans-serif;'>☢️ by RANKING RENEGADES</h3>",
+    "<h3 style='text-align: center; color: #FFFFFF; font-family: \"Readex Pro\", sans-serif;'>☢️ RANKING RENEGADES</h3>",
     unsafe_allow_html=True
 )
 
@@ -125,7 +125,6 @@ analysis_mode = st.radio(
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
 if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
-    ### POPRAWKA: Zmiana składni z Markdown na HTML ###
     info_text = """
     <strong>Proces:</strong><br>
     Analiza powiązań semantycznych w ramach jednego pliku.
@@ -202,7 +201,6 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
 # TRYB 2: LINKOWANIE WEWNĘTRZNE (DWA PLIKI)
 # ==============================================================================
 else:
-    ### POPRAWKA: Zmiana składni z Markdown na HTML ###
     info_text = """
     <strong>Proces:</strong><br>
     Analiza powiązań między dwoma plikami (np. kategorie vs blog).
@@ -339,5 +337,3 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
-
-
