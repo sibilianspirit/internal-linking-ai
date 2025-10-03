@@ -24,7 +24,7 @@ st.markdown("""
         background-color: #75f86f; /* NOWY KOLOR TŁA */
         border-radius: 10px;
         padding: 20px;
-        color: #FFFFFF;           /* NOWY KOLOR TEKSTU */
+        color: #111111;           /* NOWY KOLOR TEKSTU */
         margin-bottom: 20px;
     }
 
@@ -338,3 +338,4 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
