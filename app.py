@@ -22,7 +22,7 @@ st.markdown("""
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
         background-color: #75f86f; /* Zielone tło */
-        border: 2px solid #FFFFFF; /* NOWOŚĆ: Biała ramka */
+        border: 5px solid #FFFFFF; /* NOWOŚĆ: Biała ramka */
         border-radius: 10px;
         padding: 20px;
         color: #111111;           /* POPRAWKA: Ciemny tekst dla czytelności */
@@ -337,3 +337,4 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
