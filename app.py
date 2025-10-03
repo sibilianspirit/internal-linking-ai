@@ -8,6 +8,7 @@ import time
 import re
 from io import BytesIO
 
+### ZMIANA UX: Pełne wdrożenie czcionki "Readex Pro" ###
 st.markdown("""
     <style>
     /* Import czcionki Readex Pro */
@@ -20,29 +21,31 @@ st.markdown("""
     
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
-        background-color: #75f86f;
+        background-color: #1C283D;
         border: 1px solid #3A4C69;
         border-radius: 10px;
         padding: 20px;
-        color: #FFFFFF;
+        color: #A9C2E5;
         margin-bottom: 20px;
     }
 
     .custom-info-box strong {
-        color: #FFFFFF;
+        color: #8AB4F8;
         font-weight: 500;
     }
     </style>
     """, unsafe_allow_html=True)
-# --- Konfiguracja strony Streamlit ---
 
-st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
+# --- Konfiguracja strony Streamlit ---
+st.set_page_config(page_title="Embedding-Based Linker", layout="centered")
+
+# --- Stylizowany nagłówek ---
 st.markdown(
-    f"<h2 style='text-align: center; color: #5CFF87;'>🔗 Embedding-Based Linker</h2>",
+    "<h2 style='text-align: center; color: #5CFF87;'>🔗 Embedding-Based Linker</h2>",
     unsafe_allow_html=True
 )
 st.markdown(
-    f"<h3 style='text-align: center; color: #FFFFFF;'>☢️ by RANKING RENEGADES</h3>",
+    "<h3 style='text-align: center; color: #FFFFFF;'>☢️ by RANKING RENEGADES</h3>",
     unsafe_allow_html=True
 )
 
@@ -110,7 +113,6 @@ def load_reranker_model(model_name: str):
     return CrossEncoder(model_name, max_length=1024, trust_remote_code=True)
 
 # --- Wybór trybu analizy ---
-### ZMIANA UX: Aktualizacja etykiet ###
 analysis_mode = st.radio(
     "Wybierz tryb analizy:",
     ("Linkowanie wewnętrzne (jeden plik)", "Linkowanie wewnętrzne (dwa pliki)"),
@@ -122,16 +124,14 @@ analysis_mode = st.radio(
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
 if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
-    ### ZMIANA UX: Poprawa formatowania opisu ###
-    st.info(
-        """
-        **Proces:**  
-        Analiza powiązań semantycznych w ramach jednego pliku.
-        
-        **Wymagania:**  
-        Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
-        """
-    )
+    info_text = """
+    **Proces:**<br>
+    Analiza powiązań semantycznych w ramach jednego pliku.
+    <br><br>
+    **Wymagania:**<br>
+    Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
+    """
+    st.markdown(f'<div class="custom-info-box">{info_text}</div>', unsafe_allow_html=True)
 
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
@@ -163,7 +163,7 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
                 embeddings_matrix = np.vstack(df['embedding'].values)
                 similarity_matrix = cosine_similarity(embeddings_matrix)
                 
-                st.write(f"✅ **Etap 3/4:** Ładowanie modelu Jina Reranker...")
+                st.write(f"✅ **Etap 3/4:** Ładowanie modelu Rerankującego...")
                 reranker = load_reranker_model(RERANKER_MODEL)
 
                 st.write(f"✅ **Etap 4/4:** Precyzyjny Reranking...")
@@ -180,7 +180,6 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
                     original_urls = df[column_map['url']].iloc[candidate_indices].tolist()
                     top_urls = [original_urls[res['corpus_id']] for res in reranked_results]
                     
-                    ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
                     result_row = {'URL': df[column_map['url']].iloc[idx]}
                     for i, url in enumerate(top_urls):
                         result_row[f'LINK {i+1}'] = url
@@ -201,16 +200,14 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
 # TRYB 2: LINKOWANIE WEWNĘTRZNE (DWA PLIKI)
 # ==============================================================================
 else:
-    ### ZMIANA UX: Poprawa formatowania opisu ###
-    st.info(
-        """
-        **Proces:**  
-        Analiza powiązań między dwoma plikami (np. kategorie vs blog).
-        
-        **Wymagania:**  
-        Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
-        """
-    )
+    info_text = """
+    **Proces:**<br>
+    Analiza powiązań między dwoma plikami (np. kategorie vs blog).
+    <br><br>
+    **Wymagania:**<br>
+    Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
+    """
+    st.markdown(f'<div class="custom-info-box">{info_text}</div>', unsafe_allow_html=True)
     
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
@@ -287,7 +284,6 @@ else:
                 original_urls_candidates = df2[column_map2['url']].iloc[candidate_indices].tolist()
                 top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
                 result_row = {'URL': df1[column_map1['url']].iloc[idx]}
                 for i, url in enumerate(top_urls):
                     result_row[f'LINK {i+1}'] = url
@@ -310,7 +306,6 @@ else:
                 original_urls_candidates = df1[column_map1['url']].iloc[candidate_indices].tolist()
                 top_urls = [original_urls_candidates[res['corpus_id']] for res in reranked_results]
                 
-                ### ZMIANA UX: Nowe nazwy kolumn w wyniku ###
                 result_row = {'URL': df2[column_map2['url']].iloc[idx]}
                 for i, url in enumerate(top_urls):
                     result_row[f'LINK {i+1}'] = url
@@ -341,10 +336,3 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
-
-
-
-
-
-
-
