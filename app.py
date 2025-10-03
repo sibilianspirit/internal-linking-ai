@@ -8,6 +8,15 @@ import time
 import re
 from io import BytesIO
 
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;700&display=swap');
+    
+    html, body, [class*="st-"] {
+        font-family: 'Readex Pro', sans-serif;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 # --- Konfiguracja strony Streamlit ---
 
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
@@ -315,6 +324,7 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
 
 
