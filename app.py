@@ -10,7 +10,7 @@ from io import BytesIO
 
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
-st.title("☢️ Ranking Renagades - AI Based Internal Links")
+st.title("🤖 AI do Linkowania Wewnętrznego")
 
 # --- Stałe konfiguracyjne ---
 EMBEDDING_MODEL = 'text-embedding-3-large'
@@ -298,4 +298,5 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
