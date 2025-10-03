@@ -8,30 +8,30 @@ import time
 import re
 from io import BytesIO
 
-### ZMIANA UX: Pełne wdrożenie czcionki "Readex Pro" ###
+### FINALNE POPRAWKI UX ###
 st.markdown("""
     <style>
     /* Import czcionki Readex Pro */
     @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;700&display=swap');
     
-    /* Zastosowanie czcionki do całej aplikacji, włącznie z nagłówkami */
+    /* Zastosowanie czcionki do całej aplikacji */
     html, body, [class*="st-"], h1, h2, h3 {
         font-family: 'Readex Pro', sans-serif;
     }
     
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
-        background-color: #1C283D;
-        border: 1px solid #3A4C69;
+        background-color: #75f86f; /* NOWY KOLOR TŁA */
         border-radius: 10px;
         padding: 20px;
-        color: #A9C2E5;
+        color: #FFFFFF;           /* NOWY KOLOR TEKSTU */
         margin-bottom: 20px;
     }
 
+    /* Styl dla etykiet w ramce */
     .custom-info-box strong {
-        color: #8AB4F8;
-        font-weight: 500;
+        color: #111111;           /* Kolor dla kontrastu na zielonym tle */
+        font-weight: 700;        /* Pogrubienie dla lepszej czytelności */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -39,13 +39,13 @@ st.markdown("""
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="Embedding-Based Linker", layout="centered")
 
-# --- Stylizowany nagłówek ---
+# --- Stylizowany nagłówek z wymuszoną czcionką ---
 st.markdown(
-    "<h2 style='text-align: center; color: #5CFF87;'>🔗 Embedding-Based Linker</h2>",
+    "<h2 style='text-align: center; color: #5CFF87; font-family: \"Readex Pro\", sans-serif;'>🔗 Embedding-Based Linker</h2>",
     unsafe_allow_html=True
 )
 st.markdown(
-    "<h3 style='text-align: center; color: #FFFFFF;'>☢️ by RANKING RENEGADES</h3>",
+    "<h3 style='text-align: center; color: #FFFFFF; font-family: \"Readex Pro\", sans-serif;'>☢️ by RANKING RENEGADES</h3>",
     unsafe_allow_html=True
 )
 
@@ -124,11 +124,12 @@ analysis_mode = st.radio(
 # TRYB 1: LINKOWANIE WEWNĘTRZNE (JEDEN PLIK)
 # ==============================================================================
 if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
+    ### POPRAWKA: Zmiana składni z Markdown na HTML ###
     info_text = """
-    **Proces:**<br>
+    <strong>Proces:</strong><br>
     Analiza powiązań semantycznych w ramach jednego pliku.
     <br><br>
-    **Wymagania:**<br>
+    <strong>Wymagania:</strong><br>
     Plik CSV musi zawierać kolumny `url`, `h1`, `title` (lub ich warianty, np. `Address`, `h1-1`).
     """
     st.markdown(f'<div class="custom-info-box">{info_text}</div>', unsafe_allow_html=True)
@@ -200,11 +201,12 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
 # TRYB 2: LINKOWANIE WEWNĘTRZNE (DWA PLIKI)
 # ==============================================================================
 else:
+    ### POPRAWKA: Zmiana składni z Markdown na HTML ###
     info_text = """
-    **Proces:**<br>
+    <strong>Proces:</strong><br>
     Analiza powiązań między dwoma plikami (np. kategorie vs blog).
     <br><br>
-    **Wymagania:**<br>
+    <strong>Wymagania:</strong><br>
     Oba pliki muszą zawierać kolumny `url`, `h1`, `title` (lub ich warianty).
     """
     st.markdown(f'<div class="custom-info-box">{info_text}</div>', unsafe_allow_html=True)
