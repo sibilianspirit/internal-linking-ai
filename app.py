@@ -10,7 +10,7 @@ from io import BytesIO
 
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
-st.title("🤖 AI do Linkowania Wewnętrznego")
+st.markdown("<h2 style='text-align: center; color: #4A90E2;'>🔗 Embedding-Based Linker</h2>", unsafe_allow_html=True)
 ### ZMIANA UX: Dodanie nazwy zespołu ###
 st.header("☢️ RANKING RENEGADES")
 
@@ -309,3 +309,4 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
