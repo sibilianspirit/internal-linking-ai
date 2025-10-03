@@ -10,10 +10,27 @@ from io import BytesIO
 
 st.markdown("""
     <style>
+    /* Import czcionki Readex Pro */
     @import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;700&display=swap');
     
-    html, body, [class*="st-"] {
+    /* Zastosowanie czcionki do całej aplikacji, włącznie z nagłówkami */
+    html, body, [class*="st-"], h1, h2, h3 {
         font-family: 'Readex Pro', sans-serif;
+    }
+    
+    /* Definicja niestandardowej ramki info */
+    .custom-info-box {
+        background-color: #1C283D;
+        border: 1px solid #3A4C69;
+        border-radius: 10px;
+        padding: 20px;
+        color: #A9C2E5;
+        margin-bottom: 20px;
+    }
+
+    .custom-info-box strong {
+        color: #8AB4F8;
+        font-weight: 500;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -324,6 +341,7 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
 
 
