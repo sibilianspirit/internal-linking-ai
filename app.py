@@ -20,16 +20,16 @@ st.markdown("""
     
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
-        background-color: #1C283D;
+        background-color: #75f86f;
         border: 1px solid #3A4C69;
         border-radius: 10px;
         padding: 20px;
-        color: #A9C2E5;
+        color: #FFFFFF;
         margin-bottom: 20px;
     }
 
     .custom-info-box strong {
-        color: #8AB4F8;
+        color: #FFFFFF;
         font-weight: 500;
     }
     </style>
@@ -341,6 +341,7 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
 
 
