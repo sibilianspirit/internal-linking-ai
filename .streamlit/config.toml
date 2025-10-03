@@ -7,16 +7,16 @@ base = "dark"
 
 # Żywy, zielony kolor jako główny akcent (dla przycisków, linków, etc.)
 # Ten kolor jest inspirowany zielenią z Twojego przykładu
-primaryColor = "#5CFF87"
+primaryColor = "#75f86f"
 
 # Bardzo ciemne, niemal czarne tło
-backgroundColor = "#0E1117"
+backgroundColor = "#000000"
 
 # Tło dla kontenerów, np. pola do wgrywania plików (trochę jaśniejsze od tła)
-secondaryBackgroundColor = "#1C1E26"
+secondaryBackgroundColor = "#FFFFFF"
 
 # Jasny, biały tekst dla maksymalnego kontrastu
-textColor = "#FFFFFF"
+textColor = "#000000"
 
 # Standardowa, czytelna czcionka
 font = "sans serif"
