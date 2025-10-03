@@ -22,16 +22,16 @@ st.markdown("""
     /* Definicja niestandardowej ramki info */
     .custom-info-box {
         background-color: #1c1e26;
-        border: 1px solid #75f86f; /* NOWOŚĆ: Biała ramka */
+        border: 2px solid #75f86f; /* NOWOŚĆ: Biała ramka */
         border-radius: 10px;
         padding: 20px;
-        color: #75f86f;           /* POPRAWKA: Ciemny tekst dla czytelności */
+        color: #ffffff;           /* POPRAWKA: Ciemny tekst dla czytelności */
         margin-bottom: 20px;
     }
 
     /* Styl dla etykiet w ramce */
     .custom-info-box strong {
-        color: #ffffff;           /* Czarny dla maksymalnego kontrastu */
+        color: #75f86f;           /* Czarny dla maksymalnego kontrastu */
         font-weight: 700;
     }
     </style>
@@ -337,6 +337,7 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
 
 
