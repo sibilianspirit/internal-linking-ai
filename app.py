@@ -9,10 +9,18 @@ import re
 from io import BytesIO
 
 # --- Konfiguracja strony Streamlit ---
+
 st.set_page_config(page_title="AI do Linkowania Wewnętrznego", layout="centered")
-st.markdown("<h2 style='text-align: center; color: #4A90E2;'>🔗 Embedding-Based Linker</h2>", unsafe_allow_html=True)
-### ZMIANA UX: Dodanie nazwy zespołu ###
-st.header("☢️ RANKING RENEGADES")
+st.markdown(
+    "<h2 style='text-align: center; color: #3A75C4;'>🔗 Embedding-Based Linker</h2>",
+    unsafe_allow_html=True
+)
+
+# 2. Nazwa zespołu: Zmniejszamy, centrujemy i zmieniamy kolor na ciemnoszary.
+st.markdown(
+    "<h3 style='text-align: center; color: #555555;'>☢️ by RANKING RENEGADES</h3>",
+    unsafe_allow_html=True
+)
 
 # --- Stałe konfiguracyjne ---
 EMBEDDING_MODEL = 'text-embedding-3-large'
@@ -309,4 +317,5 @@ else:
             )
         except Exception as e:
             st.error(f"Wystąpił błąd podczas analizy: {e}")
+
 
