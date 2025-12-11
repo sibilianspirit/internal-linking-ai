@@ -142,13 +142,20 @@ def find_column_map(df: pd.DataFrame) -> dict[str, str]:
     return column_map
 
 
-def estimate_cost(texts: list[str], cost_per_1m_tokens: float) -> tuple[int, float]:
+def estimate_cost(texts: list[str], cost_per_1m_tokens: float) -> tuple[int, float, str]:
     """Szacuje liczbę tokenów i koszt API na podstawie tekstów."""
     # Przybliżenie: 1 token ≈ 4 znaki dla języka polskiego/angielskiego
     total_chars = sum(len(str(text)) for text in texts)
     estimated_tokens = total_chars // 4
     estimated_cost = (estimated_tokens / 1_000_000) * cost_per_1m_tokens
-    return estimated_tokens, estimated_cost
+    
+    # Formatowanie kosztu dla czytelności
+    if estimated_cost < 0.01:
+        cost_display = "< $0.01 USD"
+    else:
+        cost_display = f"~${estimated_cost:.2f} USD"
+    
+    return estimated_tokens, estimated_cost, cost_display
 
 
 def validate_dataframe(df: pd.DataFrame, file_name: str) -> list[str]:
@@ -361,13 +368,13 @@ if analysis_mode == "Linkowanie wewnętrzne (jeden plik)":
 
             # Szacowanie kosztów
             texts_preview = df[column_to_embed].tolist()
-            est_tokens, est_cost = estimate_cost(texts_preview, EMBEDDING_COST_PER_1M_TOKENS)
+            est_tokens, est_cost, cost_display = estimate_cost(texts_preview, EMBEDDING_COST_PER_1M_TOKENS)
             cost_container.markdown(
                 f'<div class="cost-box">'
                 f'<strong>📊 Szacowany koszt:</strong><br>'
                 f'• Liczba URLi: {len(df)}<br>'
                 f'• Szacowane tokeny: ~{est_tokens:,}<br>'
-                f'• Szacowany koszt API: ~${est_cost:.4f} USD'
+                f'• Szacowany koszt API: {cost_display}'
                 f'</div>',
                 unsafe_allow_html=True
             )
@@ -529,14 +536,14 @@ else:
         texts1 = df1[column_to_embed_1].tolist()
         texts2 = df2[column_to_embed_2].tolist()
         all_texts = texts1 + texts2
-        est_tokens, est_cost = estimate_cost(all_texts, EMBEDDING_COST_PER_1M_TOKENS)
+        est_tokens, est_cost, cost_display = estimate_cost(all_texts, EMBEDDING_COST_PER_1M_TOKENS)
         
         st.markdown(
             f'<div class="cost-box">'
             f'<strong>📊 Szacowany koszt łączny:</strong><br>'
             f'• Plik 1: {len(df1)} URLi | Plik 2: {len(df2)} URLi<br>'
             f'• Szacowane tokeny: ~{est_tokens:,}<br>'
-            f'• Szacowany koszt API: ~${est_cost:.4f} USD'
+            f'• Szacowany koszt API: {cost_display}'
             f'</div>',
             unsafe_allow_html=True
         )
