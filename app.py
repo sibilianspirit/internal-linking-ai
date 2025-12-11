@@ -51,6 +51,27 @@ st.markdown("""
         color: #ffffff;
         margin: 10px 0;
     }
+    
+    /* Fix dla rozmazanego tekstu w expander */
+    .streamlit-expanderHeader {
+        font-family: 'Readex Pro', sans-serif !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+    }
+    
+    .streamlit-expanderHeader p {
+        font-size: 1rem !important;
+        margin: 0 !important;
+    }
+    
+    /* Alternatywny selektor dla nowszych wersji Streamlit */
+    [data-testid="stExpander"] summary {
+        font-family: 'Readex Pro', sans-serif !important;
+        font-size: 1rem !important;
+        -webkit-font-smoothing: antialiased !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
