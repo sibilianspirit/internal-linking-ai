@@ -51,27 +51,6 @@ st.markdown("""
         color: #ffffff;
         margin: 10px 0;
     }
-    
-    /* Fix dla rozmazanego tekstu w expander */
-    .streamlit-expanderHeader {
-        font-family: 'Readex Pro', sans-serif !important;
-        font-size: 1rem !important;
-        font-weight: 500 !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-    }
-    
-    .streamlit-expanderHeader p {
-        font-size: 1rem !important;
-        margin: 0 !important;
-    }
-    
-    /* Alternatywny selektor dla nowszych wersji Streamlit */
-    [data-testid="stExpander"] summary {
-        font-family: 'Readex Pro', sans-serif !important;
-        font-size: 1rem !important;
-        -webkit-font-smoothing: antialiased !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -299,7 +278,9 @@ analysis_mode = st.radio(
 )
 
 # --- Konfigurowalne parametry ---
-with st.expander("⚙️ Ustawienia zaawansowane"):
+show_settings = st.checkbox("⚙️ Pokaż ustawienia zaawansowane", value=False)
+
+if show_settings:
     col_settings1, col_settings2 = st.columns(2)
     with col_settings1:
         NUM_CANDIDATES = st.slider(
@@ -319,6 +300,11 @@ with st.expander("⚙️ Ustawienia zaawansowane"):
         )
     
     remove_duplicates = st.checkbox("Automatycznie usuń duplikaty URL", value=True)
+else:
+    # Domyślne wartości gdy ustawienia są ukryte
+    NUM_CANDIDATES = 15
+    NUM_FINAL_RESULTS = 5
+    remove_duplicates = True
 
 
 # ==============================================================================
