@@ -3,10 +3,22 @@ import pandas as pd
 from openai import OpenAI
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import CrossEncoder
 import time
 import re
 from io import BytesIO
+import torch
+
+# Monkey-patch: przywróć funkcję usuniętą w transformers>=4.40,
+# wymaganą przez starszą wersję kodu modelu Jina w cache HuggingFace
+import transformers.models.xlm_roberta.modeling_xlm_roberta as _xlm_module
+if not hasattr(_xlm_module, 'create_position_ids_from_input_ids'):
+    def _create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_length=0):
+        mask = input_ids.ne(padding_idx).int()
+        incremental_indices = (torch.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
+        return incremental_indices.long() + padding_idx
+    _xlm_module.create_position_ids_from_input_ids = _create_position_ids_from_input_ids
+
+from sentence_transformers import CrossEncoder
 
 # --- Konfiguracja strony Streamlit ---
 st.set_page_config(page_title="Embedding-Based Linker", layout="centered")
